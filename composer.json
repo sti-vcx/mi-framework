@@ -1,5 +1,5 @@
 {
-    "name": "mi-squared/framework",
+    "name": "mi-squared/mini-framework",
     "type": "library",
     "description": "A simple mvc framework",
     "keywords": ["openemr"],
