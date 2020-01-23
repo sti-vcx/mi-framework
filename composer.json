@@ -20,8 +20,7 @@
             "Mi2\\Utils": "src/"
         },
         "classmap": [
-            "../../../interface/crisisprep/models",
-            "../../../interface/crisisprep/controllers"
+            "../../../library"
         ]
     },
     "minimum-stability": "stable"
