@@ -1,7 +1,7 @@
 <?php
 namespace Mi2\DataTable;
 
-abstract class AbstractSql
+class QueryBuilder
 {
     protected $statement = "";
     protected $resultSet = null;
@@ -10,37 +10,61 @@ abstract class AbstractSql
     protected $binds = array();
     protected $limit = null;
     protected $sortOrder = array();
+    protected $groupBy = "";
+
+    /**
+     * @return string
+     */
+    public function getGroupBy(): string
+    {
+        return $this->groupBy;
+    }
+
+    /**
+     * @param string $groupBy
+     */
+    public function setGroupBy(string $groupBy): void
+    {
+        $this->groupBy = $groupBy;
+    }
     protected $columns = array();
-    
+
+    public function __construct($statement = "")
+    {
+        $this->statement = $statement;
+    }
+
     public function getColumns()
     {
         return $this->columns;
-    }  
+    }
 
     public function setColumns( array $columns )
     {
         $this->columns = $columns;
     }
-    
-    public abstract function getStatement();
-    
+
+    public function getStatement()
+    {
+        return $this->statement;
+    }
+
     public function getTotalCount()
     {
         $this->statement = $this->getStatement();
         $statement = "SELECT count(*) AS count FROM ($this->statement) AS my_table";
-        $row = sqlQuery($statement);
+        $row = sqlQuery($statement, $this->binds);
         return $row['count'];
     }
-    
+
     public function getFilteredCount()
     {
         $this->statement = $this->getStatement();
-        $this->applySearchFilters();
         $statement = "SELECT count(*) AS count FROM ($this->statement) AS my_table";
-        $row = sqlQuery($statement,$this->binds);
+        $row = sqlQuery($statement, $this->binds);
         return $row['count'];
     }
-    
+
     public function addSearchFilter( SearchFilter $searchFilter, $requirement = false )
     {
         if ( $requirement === true ) {
@@ -49,18 +73,18 @@ abstract class AbstractSql
             $this->searchFilters[] = $searchFilter;
         }
     }
-    
-    
+
+
     public function setLimit( Limit $limit )
     {
         $this->limit = $limit;
     }
-    
+
     public function addSortOrder( SortOrder $sortOrder )
     {
         $this->sortOrder[] = $sortOrder;
     }
-    
+
     private function setStatement( $statement, $binds = null )
     {
         $this->statement = $statement;
@@ -68,19 +92,19 @@ abstract class AbstractSql
             $this->binds = $binds;
         }
     }
-    
+
     protected function applySearchFilters()
     {
         $this->binds = array();
         if ( count($this->searchFilters) ) {
-        
+
             // Check to see if we have a WHERE in our statement already
             if ( strpos( $this->statement, "WHERE" ) === false ) {
                 $this->statement .= " WHERE ( ";
             } else {
                 $this->statement .= " AND ( ";
             }
-        
+
             $count = 0;
             foreach ( $this->searchFilters as $filter ) {
                 if ( $filter instanceof SearchFilter ) {
@@ -105,7 +129,7 @@ abstract class AbstractSql
                     $count++;
                 }
             }
-        
+
             $this->statement .= " ) ";
         }
 
@@ -143,47 +167,20 @@ abstract class AbstractSql
 
             $this->statement .= " ) ";
         }
-        
-    }
 
-    public function getTableColumn( Column $column )
-    {
-        $parts = explode(".", $column->getData());
-        $return = '';
-        if ( count( $parts ) > 1 ) {
-            $return = $parts[1];
-        } else if ( $parts[0] !== null ) {
-            $return = $parts[0];
-        }
-
-        return $return;
-    }
-
-    public function processRow( $row )
-    {
-        $result = array();
-        foreach ( $this->getColumns() as $col ) {
-            if ( $col instanceof Column ) {
-
-                $behavior = $col->getBehavior();
-                if ( $behavior instanceof ColumnBehaviorIF ) {
-                    $result[$this->getTableColumn($col)]= $behavior->getOutput( $row );
-                } else {
-                    $temp = $row[$this->getTableColumn($col)];
-                    $result[$this->getTableColumn($col)]= $temp;
-                }
-            }
-        }
-        return $result;
     }
 
     public function execute()
     {
         $this->statement = $this->getStatement();
-        
+
         // Apply search filters to the statement
         $this->applySearchFilters();
-        
+
+        if ($this->getGroupBy()) {
+            $this->statement .= " GROUP BY ".$this->getGroupBy();
+        }
+
         // Process order
         if ( count($this->sortOrder) > 0 ) {
             $count = 0;
@@ -198,22 +195,23 @@ abstract class AbstractSql
                 }
             }
         }
-        
+
         // Process limit
         if ( $this->limit instanceof Limit ) {
             $this->statement .= " LIMIT ".$this->limit->start.", ".$this->limit->length;
         }
+
         error_log($this->statement);
         $this->resultSet = sqlStatement( $this->statement, $this->binds );
         return $this->resultSet;
     }
-    
+
     public function fetchNext()
     {
         if ( $this->resultSet ) {
             return sqlFetchArray( $this->resultSet );
         }
-        
+
         return false;
-    }    
+    }
 }

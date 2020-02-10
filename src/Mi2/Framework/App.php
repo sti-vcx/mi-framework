@@ -2,8 +2,9 @@
 
 namespace Mi2\Framework;
 
-class App 
+class App
 {
+    protected $config = null;
     protected $request = null;
     protected $viewer = null;
     protected $view = null;
@@ -11,38 +12,46 @@ class App
     protected $applicationPath = '';
     protected $applicationUrl = '';
     protected $scriptPath = '';
-    
+
     public function __construct()
     {
         $this->request = new Request();
         $this->viewer = new Viewer();
-        $this->view = new View(); 
-        $this->layout = new View();    
-        $this->applicationPath = dirname( $_SERVER["SCRIPT_FILENAME"] );  
-        $this->applicationUrl = dirname( $_SERVER['SCRIPT_NAME'] ); 
-        $this->viewer->setApplicationUrl($this->applicationUrl);   
+        $this->view = new View();
+        $this->layout = new View();
+        $this->applicationPath = dirname( $_SERVER["SCRIPT_FILENAME"] );
+        $this->applicationUrl = dirname( $_SERVER['SCRIPT_NAME'] );
+        $this->viewer->setApplicationUrl($this->applicationUrl);
         $this->setScriptPath($this->applicationPath.DIRECTORY_SEPARATOR.'views');
     }
 
-    public function run() 
+    public function run()
     {
+        // Load config file
+        $configFile = $this->applicationPath."/mini-framework-config.php";
+        if (file_exists($configFile)) {
+            $this->config = include $configFile;
+        } else {
+            error_log("No Config file specified");
+        }
+
         $actionParam = $this->request->getParam('action', null);
         if ( $actionParam === null ) {
             throw new \Exception('No action parameter provided to app.');
         }
-        
+
         $paramParts = explode('!', $actionParam);
         $controller = $paramParts[0];
         if ( empty($controller) ) {
             throw new \Exception('No controller specified.');
         }
-        
+
         $action = $paramParts[1];
         if ( empty($action) ) {
             $action = 'index';
         }
 
-        $controllerClassName = "PerfectTranscription\\Controller\\".ucfirst( $controller )."Controller";
+        $controllerClassName = $this->config['APP_NAMESPACE']."\\Controllers\\".ucfirst( $controller )."Controller";
         $controllerInstance = new $controllerClassName();
         $controllerInstance->setRequest( $this->request );
         $controllerInstance->setApplicationUrl($this->applicationUrl);
@@ -50,22 +59,22 @@ class App
 
         $this->perform($controllerInstance, $action);
     }
-    
+
     public function setScriptPath( $path )
     {
         $this->scriptPath = $path;
     }
-    
+
     public function getScriptPath()
     {
         return $this->scriptPath;
     }
-    
+
     public function getView()
     {
         return $this->view;
     }
-    
+
     public function getLayout()
     {
         return $this->layout;
@@ -74,7 +83,7 @@ class App
     function perform( AbstractController $controller, $action )
     {
         $action_method = '_action_' . $action;
-    
+
         // execute the default action if action is not found
         if ( method_exists( $controller, $action_method ) ) {
             $controller->$action_method();
@@ -87,7 +96,7 @@ class App
         // Otherwise, just render the view
         $layoutName = $controller->getLayoutScript();
         $viewName = $controller->getViewScript();
-        
+
         // Check to see if we have a view name. If not, this probably an ajax request with no view associated (returns json or text)
         if ( $viewName ) {
             if ( $layoutName ) {
@@ -100,10 +109,10 @@ class App
                 $this->viewer->render($this->view, $this->view->getAttributes());
             }
         }
-        
+
         return true;
     }
-    
+
     public function stripExtension( $filename )
     {
         // Strip the extension

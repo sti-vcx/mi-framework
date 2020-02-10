@@ -3,19 +3,28 @@ namespace Mi2\DataTable;
 
 use Mi2\Framework\AbstractModel;
 
-class Results extends AbstractModel
+class ResultBuilder extends AbstractModel
 {
     public $results = array();
 
-    protected $sEcho = 1;
+    protected $draw = 1;
     protected $totalItems = 0;
     protected $filteredTotal = 0;
 
     /**
      *
-     * @var RowAttributeFilterIF $rowClassFilter
+     * @var RowAttributeFilterIF $rowAttributeFilter
      */
-    protected $rowClassFilter = null;
+    protected $rowAttributeFilter = null;
+
+    protected $dataTable;
+    protected $queryBuilder;
+
+    public function __construct(DataTable $dataTable, QueryBuilder $queryBuilder)
+    {
+        $this->dataTable = $dataTable;
+        $this->queryBuilder = $queryBuilder;
+    }
 
     /**
      * Find a column by it's index
@@ -32,55 +41,57 @@ class Results extends AbstractModel
         return null;
     }
 
-    public function getResults(QueryBuilder $sql, array $options = null)
+    public function getResults(array $options = null)
     {
-        $this->sEcho = intval( $options['sEcho'] );
-        $aColumns = explode( ',', $options['sColumns'] );
+        $this->draw = intval($options['draw']);
 
-        if ( isset( $options['iDisplayStart'] ) && $options['iDisplayLength'] != '-1' ) {
-            $limit = new Limit( intval( $options['iDisplayStart'] ), intval( $options['iDisplayLength'] ) );
-            $sql->setLimit( $limit );
+
+        if (isset( $options['start']) && $options['length'] != '-1') {
+            $limit = new Limit(intval($options['start']), intval($options['length']));
+            $this->queryBuilder->setLimit($limit);
         }
 
         // Process sort order
-        for ( $i = 0; $i < intval( $options['iSortingCols'] ); ++$i ) {
-            $iSortCol = intval( $options["iSortCol_$i"] );
-            if ( $options["bSortable_$iSortCol"] == "true" ) {
-                $sSortDir = mysqli_real_escape_string( $options["sSortDir_$i"] ); // ASC or DESC
-                $order = ( $sSortDir == 'desc' ) ? SortOrder::SORT_DESC : SortOrder::SORT_ASC;
-                $column = $this->findColumn( $sql->getColumns(), $iSortCol );
-                if ( $column instanceof Column ) {
-                    if ( $column->isOrderable() ) {
-                        $sortField = $column->getSort() ? $column->getSort() : $column->getData();
-                        $sortOrder = new SortOrder( $sortField, $order );
-                        $sql->addSortOrder( $sortOrder );
+        foreach ($options['order'] as $order) {
+            $sort_column = $order['column'];
+            $sort_direction = $order['dir'];
+            $col = $this->findColumn($this->dataTable->getColumns(), $sort_column);
+            if ($col instanceof Column) {
+                if ($col->isOrderable()) {
+                    $sortField = $col->getSort() ? $col->getSort() : $col->getField();
+                    $sortOrder = new SortOrder($sortField, $sort_direction);
+                    $this->queryBuilder->addSortOrder($sortOrder);
+                }
+            } else {
+                throw new \Exception("Column not found at index $sort_column");
+            }
+        }
+
+        // Global search
+        if (!empty($options['search'])) {
+            foreach ($this->dataTable->getColumns() as $column) {
+                if ($column instanceof Column) {
+                    if ($column->isSearchable()) {
+                        $searchTerm = $options['search']['value'];
+                        if ($searchTerm) {
+                            $searchFilter = $this->makeSearchFilter($column, $searchTerm, true);
+                            $this->queryBuilder->addSearchFilter($searchFilter);
+                        }
                     }
-                } else {
-                    error_log( "Column not found at index $iSortCol" );
                 }
             }
         }
 
-        // KCC hack to always sort by last updated datetime after other sort parameters
-        $sortOrder = new SortOrder( 'last_updated_datetime', SortOrder::SORT_DESC );
-        $sql->addSortOrder( $sortOrder );
-
-        if ( !empty( $options['sSearch'] ) ) {
-
-            foreach ( $sql->getColumns() as $column ) {
-                if ( $column instanceof Column ) {
-                    if ( $column->isSearchable() ) {
-                        $searchTerm = $options['sSearch'];
-                        $searchFilter = $this->makeSearchFilter( $column, $searchTerm, true );
-                        $sql->addSearchFilter( $searchFilter );
-                    }
-                }
+        // Additional Filters
+        if (count($this->dataTable->getSearchFilters()) > 0) {
+            foreach ($this->dataTable->getSearchFilters() as $searchFilter) {
+                $this->queryBuilder->addSearchFilter($searchFilter, false);
             }
         }
 
         // Filter individual columns
         $columnIndex = 0;
-        foreach ( $sql->getColumns() as $column ) {
+        foreach ( $this->dataTable->getColumns() as $column ) {
 
             if ( $column instanceof Column &&
                 $column->isSearchable() ) {
@@ -104,36 +115,41 @@ class Results extends AbstractModel
                     $parts = explode( "|", $term );
                     foreach ( $parts as $filter_part ) {
                         $searchFilter = $this->makeSearchFilter( $column, $filter_part );
-                        $sql->addSearchFilter( $searchFilter, false );
+                        $this->queryBuilder->addSearchFilter( $searchFilter, false );
                     }
 
                 } else {
                     $searchFilter = $this->makeSearchFilter( $column, $searchTerm );
-                    $sql->addSearchFilter( $searchFilter, true );
+                    $this->queryBuilder->addSearchFilter( $searchFilter, true );
                 }
             }
 
             $columnIndex++;
         }
 
-        $this->sEcho = $options['sEcho'];
+        if ($this->dataTable->getGroupBy()) {
+            $this->queryBuilder->setGroupBy($this->dataTable->getGroupBy());
+        }
+
+        $this->draw = $options['draw'];
 
         $count = 0;
         $results = array();
-        $sql->execute();
-        while ( $row = $sql->fetchNext() ) {
-            $result = $sql->processRow( $row );
+        $this->queryBuilder->execute();
+        while ($row = $this->queryBuilder->fetchNext()) {
+            $result = $this->dataTable->processRow( $row );
             $results[]= $result;
             $count++;
         }
+
         // Get total number of rows in the table.
-        $this->totalItems = $sql->getTotalCount();
+        $this->totalItems = $this->queryBuilder->getTotalCount();
 
         // Get total number of rows in the table after filtering.
-        $this->filteredTotal = $sql->getFilteredCount();
+        $this->filteredTotal = $this->queryBuilder->getFilteredCount();
 
         $this->results = $results;
-        return $this->results;
+        return $this;
     }
 
     protected function makeSearchFilter( Column $column, $searchTerm, $textSearch = false )
@@ -184,24 +200,23 @@ class Results extends AbstractModel
     public function toJson()
     {
         $output = [
-            "draw" => 1,
-            "recordsTotal" => 2,
-            "recordsFiltered" => 2,
+            "draw" => $this->draw,
+            "recordsTotal" => $this->totalItems,
+            "recordsFiltered" => $this->filteredTotal,
             "data" => []
         ];
 
-        $count = 0;
+        $count = 1;
         foreach ($this->results as $row) {
-            $values = array_values($row);
             $rowClass = '';
-            if ($this->rowClassFilter instanceof RowAttributeFilterIF) {
-                $rowClass = $this->rowClassFilter->calculateRowClass($row);
+            $rowId = $count;
+            if ($this->rowAttributeFilter instanceof RowAttributeFilterIF) {
+                $rowClass = $this->rowAttributeFilter->calculateRowClass($row);
+                $rowId = $this->rowAttributeFilter->calculateRowId($row);
             }
-            $arow = ['DT_RowId' => 'row-'.$count, 'DT_RowClass' => $rowClass];
-            foreach ($values as $val) {
-                $arow[]= stripslashes($val);
-            }
-            $output['data'][]= $arow;
+
+            $arow = ['DT_RowId' => $rowId, 'DT_RowClass' => $rowClass];
+            $output['data'][]= array_merge($row, $arow);
             $count++;
         }
 
