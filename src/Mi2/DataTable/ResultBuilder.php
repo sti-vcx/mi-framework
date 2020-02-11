@@ -160,27 +160,29 @@ class ResultBuilder extends AbstractModel
 
             $type = SearchFilter::TYPE_LIKE;
             $behavior = $column->getBehavior();
-            $map = $behavior->getMap();
-            if (  is_a( $behavior, 'ActiveChecklist' ) &&
-                is_array( $map ) ) {
+            if ($behavior !== null) {
+                $map = $behavior->getMap();
+                if (is_a($behavior, 'ActiveChecklist') &&
+                    is_array($map)) {
 
-                // If we have a checklist, we check the value as text because
-                // The stored value is in a JSON string
+                    // If we have a checklist, we check the value as text because
+                    // The stored value is in a JSON string
 
-                $searchTerm = '\"'.$searchTerm.'\"';
-                $type = SearchFilter::TYPE_LIKE;
+                    $searchTerm = '\"' . $searchTerm . '\"';
+                    $type = SearchFilter::TYPE_LIKE;
 
-            } else if ( $behavior &&
-                is_array( $map ) ) {
+                } else if ($behavior &&
+                    is_array($map)) {
 
-                // By default, the type is "like"
-                // but if we have a map, make the term match exactly using strict
+                    // By default, the type is "like"
+                    // but if we have a map, make the term match exactly using strict
 
-                if ( $searchTerm === 'NULL' ) {
-                    // If the search term contains NULL keyword, then we search for values with sql "IS NULL"
-                    $type = SearchFilter::TYPE_IS_NULL;
-                } else {
-                    $type = SearchFilter::TYPE_STRICT;
+                    if ($searchTerm === 'NULL') {
+                        // If the search term contains NULL keyword, then we search for values with sql "IS NULL"
+                        $type = SearchFilter::TYPE_IS_NULL;
+                    } else {
+                        $type = SearchFilter::TYPE_STRICT;
+                    }
                 }
             }
 
@@ -189,7 +191,7 @@ class ResultBuilder extends AbstractModel
                 $column->getSort() ) {
                 $searchFilter = new SearchFilter( $column->getSort(), $searchTerm, SearchFilter::TYPE_LIKE );
             } else {
-                $searchFilter = new SearchFilter( $column->getData(), $searchTerm, $type );
+                $searchFilter = new SearchFilter( $column->getField(), $searchTerm, $type );
             }
 
         }
