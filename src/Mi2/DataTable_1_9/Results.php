@@ -1,6 +1,7 @@
 <?php
 namespace Mi2\DataTable_1_9;
 
+use Mi2\Dashboard\Models\ActiveChecklist;
 use Mi2\Framework\AbstractModel;
 
 class Results extends AbstractModel
@@ -156,7 +157,7 @@ class Results extends AbstractModel
             $type = SearchFilter::TYPE_LIKE;
             $behavior = $column->getBehavior();
             $map = $behavior->getMap();
-            if (  is_a( $behavior, 'ActiveChecklist' ) &&
+            if (  is_a( $behavior, ActiveChecklist::class ) &&
                 is_array( $map ) ) {
 
                 // If we have a checklist, we check the value as text because
