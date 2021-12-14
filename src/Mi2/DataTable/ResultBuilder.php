@@ -45,12 +45,6 @@ class ResultBuilder extends AbstractModel
     {
         $this->draw = intval($options['draw']);
 
-
-        if (isset( $options['start']) && $options['length'] != '-1') {
-            $limit = new Limit(intval($options['start']), intval($options['length']));
-            $this->queryBuilder->setLimit($limit);
-        }
-
         // Process sort order
         foreach ($options['order'] as $order) {
             $sort_column = $order['column'];
@@ -131,6 +125,17 @@ class ResultBuilder extends AbstractModel
             $this->queryBuilder->setGroupBy($this->dataTable->getGroupBy());
         }
 
+        // Get total number of rows in the table.
+        $this->totalItems = $this->queryBuilder->getTotalCount();
+
+        // Get total number of rows in the table after filtering.
+        $this->filteredTotal = $this->queryBuilder->getFilteredCount();
+
+        if (isset( $options['start']) && $options['length'] != '-1') {
+            $limit = new Limit(intval($options['start']), intval($options['length']));
+            $this->queryBuilder->setLimit($limit);
+        }
+
         $this->draw = $options['draw'];
 
         $count = 0;
@@ -141,12 +146,6 @@ class ResultBuilder extends AbstractModel
             $results[]= $result;
             $count++;
         }
-
-        // Get total number of rows in the table.
-        $this->totalItems = $this->queryBuilder->getTotalCount();
-
-        // Get total number of rows in the table after filtering.
-        $this->filteredTotal = $this->queryBuilder->getFilteredCount();
 
         $this->results = $results;
         return $this;
