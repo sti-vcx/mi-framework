@@ -1,6 +1,6 @@
 <?php
 
-namespace Mi2\Framework;
+namespace Sti\Framework;
 
 class View extends AbstractModel implements ViewableIF
 {

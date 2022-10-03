@@ -6,7 +6,7 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
-    'Mi2\\Utils' => array($baseDir . '/src'),
-    'Mi2\\Framework' => array($baseDir . '/src'),
-    'Mi2\\DataTable' => array($baseDir . '/src'),
+    'Sti\\Utils' => array($baseDir . '/src'),
+    'Sti\\Framework' => array($baseDir . '/src'),
+    'Sti\\DataTable' => array($baseDir . '/src'),
 );

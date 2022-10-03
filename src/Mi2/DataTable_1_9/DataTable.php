@@ -1,8 +1,8 @@
 <?php
-namespace Mi2\DataTable_1_9;
+namespace Sti\DataTable_1_9;
 
-use Mi2\Framework\AbstractModel;
-use Mi2\Framework\Request;
+use Sti\Framework\AbstractModel;
+use Sti\Framework\Request;
 
 /**
  * 

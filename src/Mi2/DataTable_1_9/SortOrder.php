@@ -1,5 +1,5 @@
 <?php
-namespace Mi2\DataTable_1_9;
+namespace Sti\DataTable_1_9;
 
 class SortOrder
 {

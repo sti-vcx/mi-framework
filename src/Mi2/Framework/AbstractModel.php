@@ -1,6 +1,6 @@
 <?php
 
-namespace Mi2\Framework;
+namespace Sti\Framework;
 
 abstract class AbstractModel
 {

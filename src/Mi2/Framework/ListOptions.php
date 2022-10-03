@@ -1,7 +1,7 @@
 <?php
-namespace Mi2\Framework;
+namespace Sti\Framework;
 
-use Mi2\Framework\AbstractModel;
+use Sti\Framework\AbstractModel;
 
 class ListOptions extends AbstractModel
 {   

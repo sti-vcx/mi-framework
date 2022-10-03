@@ -1,5 +1,5 @@
 <?php
-namespace Mi2\Framework;
+namespace Sti\Framework;
 
 /**
  *   Abstract Controller

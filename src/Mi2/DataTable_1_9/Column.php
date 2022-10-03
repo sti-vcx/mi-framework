@@ -1,7 +1,7 @@
 <?php
-namespace Mi2\DataTable_1_9;
+namespace Sti\DataTable_1_9;
 
-use Mi2\Framework\AbstractModel;
+use Sti\Framework\AbstractModel;
 
 class Column extends AbstractModel
 {

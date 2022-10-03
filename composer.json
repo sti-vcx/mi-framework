@@ -1,13 +1,13 @@
 {
-    "name": "sti-vcx/mi-framework",
+    "name": "sti-vcx/sti-framework",
     "type": "library",
     "description": "A simple mvc framework",
     "keywords": ["openemr"],
-    "homepage": "https://mi-squared.com",
+    "homepage": "https://campusaterrado.vr.uff.br",
     "authors": [
         {
-            "name": "Ken Chapple",
-            "email": "ken@mi-squared.com"
+            "name": "César Daer",
+            "email": "cesar_daer@id.uff.br"
         }
     ],
     "require": {
@@ -15,9 +15,9 @@
     },
     "autoload": {
         "psr-0": {
-            "Mi2\\Framework": "src/",
-            "Mi2\\DataTable": "src/",
-            "Mi2\\Utils": "src/"
+            "Sti\\Framework": "src/",
+            "Sti\\DataTable": "src/",
+            "Sti\\Utils": "src/"
         },
         "classmap": [
         ]

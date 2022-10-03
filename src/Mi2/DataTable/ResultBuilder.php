@@ -1,7 +1,7 @@
 <?php
-namespace Mi2\DataTable;
+namespace Sti\DataTable;
 
-use Mi2\Framework\AbstractModel;
+use Sti\Framework\AbstractModel;
 
 class ResultBuilder extends AbstractModel
 {
